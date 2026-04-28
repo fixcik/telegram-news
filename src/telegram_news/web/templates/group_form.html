@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == "new" %}Новая группа{% else %}{{ group.name }}{% endif %} · telegram-news{% endblock %}
+{% block content %}
+<div class="section-head">
+  <div>
+    <h2>{% if mode == "new" %}Новая группа{% else %}{{ group.name }}{% endif %}</h2>
+    <div class="subtitle">
+      {% if mode == "new" %}Создание новой группы каналов{% else %}Редактирование{% endif %}
+    </div>
+  </div>
+  <a href="/" role="button" class="btn-mini secondary outline">← Назад</a>
+</div>
+
+{% if error %}
+  <div class="flash flash-error">{{ error }}</div>
+{% endif %}
+
+<form method="post" action="{% if mode == 'new' %}/groups/new{% else %}/groups/{{ group.name }}/edit{% endif %}">
+  <label>
+    Имя
+    <input type="text" name="name" required
+           value="{{ group.name if group else '' }}"
+           {% if mode == 'edit' %}readonly{% endif %}>
+    <small>PK и id job'а в шедулере. На редактировании не меняется.</small>
+  </label>
+
+  <fieldset>
+    <legend>Расписание</legend>
+    {% set kind = 'interval' if (group and group.interval_hours) else 'cron' %}
+    <label style="font-weight: 400;">
+      <input type="radio" name="schedule_kind" value="cron"
+             {% if kind == 'cron' %}checked{% endif %}>
+      <strong>Cron</strong> — 5 полей POSIX
+    </label>
+    <input type="text" name="cron"
+           placeholder="0 11 * * *"
+           value="{{ group.cron or '' if group else '' }}">
+    <small>Примеры: <code>0 11 * * *</code> (ежедневно 11:00), <code>0 9,21 * * *</code> (дважды в день), <code>0 10 * * 1-5</code> (по будням)</small>
+
+    <label style="font-weight: 400; margin-top: 0.8rem;">
+      <input type="radio" name="schedule_kind" value="interval"
+             {% if kind == 'interval' %}checked{% endif %}>
+      <strong>Интервал</strong> — каждые N часов
+    </label>
+    <div class="grid">
+      <label style="font-weight: 400;">
+        <small>N часов</small>
+        <input type="number" step="0.5" min="0.5" name="interval_hours"
+               placeholder="48"
+               value="{{ group.interval_hours or '' if group else '' }}">
+      </label>
+      <label style="font-weight: 400;">
+        <small>Anchor (HH:MM, опц.)</small>
+        <input type="text" name="interval_anchor"
+               placeholder="11:00"
+               value="{{ group.interval_anchor or '' if group else '' }}">
+      </label>
+    </div>
+  </fieldset>
+
+  <div class="grid" style="margin-top: 1rem;">
+    <label>
+      Бот
+      <select name="bot" required>
+        {% for b in bots %}
+          <option value="{{ b.name }}"
+                  {% if group and group.bot == b.name %}selected{% endif %}>{{ b.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Канал-цель
+      <input type="text" name="target" required
+             placeholder="@my_crypto_digest или -1001234567890"
+             value="{{ group.target if group else '' }}">
+    </label>
+  </div>
+
+  <label>
+    Каналы-источники
+    <textarea name="channels" rows="5" required placeholder="@channel_one&#10;@channel_two">{% if group %}{{ group.channels | join('\n') }}{% endif %}</textarea>
+    <small>По одному на строку</small>
+  </label>
+
+  <label>
+    Интересы
+    <textarea name="interests" rows="4" required>{{ group.interests if group else '' }}</textarea>
+    <small>Что интересно / не интересно — идёт в system prompt LLM</small>
+  </label>
+
+  <label>
+    Инструкции для LLM <small style="font-weight: 400;">(опционально)</small>
+    <textarea name="instructions" rows="3" placeholder="Например: после каждого буллета добавляй своё мнение в скобках начиная с 💭">{{ group.instructions or '' if group else '' }}</textarea>
+  </label>
+
+  <div class="row-actions" style="margin-top: 1.2rem;">
+    <button type="submit" class="btn-mini">{% if mode == "new" %}Создать{% else %}Сохранить{% endif %}</button>
+    <a href="/" role="button" class="btn-mini secondary outline">Отмена</a>
+  </div>
+</form>
+{% endblock %}

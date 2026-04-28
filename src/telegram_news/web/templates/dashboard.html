@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Группы · telegram-news{% endblock %}
+{% block content %}
+<div class="section-head">
+  <div>
+    <h2>Группы</h2>
+    <div class="subtitle">{{ rows|length }} {% if rows|length == 1 %}группа{% elif 2 <= rows|length <= 4 %}группы{% else %}групп{% endif %} · часовой пояс {{ tz }}</div>
+  </div>
+  <a href="/groups/new" role="button" class="btn-mini">+ Новая группа</a>
+</div>
+
+{% if not rows %}
+  <div class="empty-state">
+    <p>Пока ни одной группы.</p>
+    <p>Создай через <a href="/groups/new">+ Новая группа</a> или импортируй из yaml:<br>
+       <code>uv run telegram-news import-yaml</code></p>
+  </div>
+{% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Имя</th>
+        <th>Расписание</th>
+        <th>Каналы</th>
+        <th>Бот → Канал</th>
+        <th>Последний</th>
+        <th>Следующий</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td><strong>{{ r.name }}</strong></td>
+        {% with group=r.group, description=r.schedule %}{% include "_schedule_cell.html" %}{% endwith %}
+        <td>
+          {% for ch in r.channels %}<span class="channel-badge">{{ ch }}</span>{% endfor %}
+        </td>
+        <td class="target-mono">{{ r.bot }} → {{ r.target }}</td>
+        {% with name=r.name, text=r.last_digest_at %}{% include "_last_digest_cell.html" %}{% endwith %}
+        {% with name=r.name, text=r.next_run %}{% include "_next_run_cell.html" %}{% endwith %}
+        <td>
+          <div class="row-actions">
+            <button class="btn-mini secondary"
+                    hx-post="/groups/{{ r.name }}/run-now"
+                    hx-swap="none">▶ Run</button>
+            <a href="/groups/{{ r.name }}/edit" role="button" class="btn-mini secondary outline">Edit</a>
+            <button class="btn-mini contrast outline"
+                    hx-post="/groups/{{ r.name }}/delete"
+                    hx-confirm="Удалить группу {{ r.name }}?"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML swap:240ms">✕</button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+
+<details class="log-section">
+  <summary>📋 Логи (live)</summary>
+  <div class="log-controls">
+    <label>
+      <input type="checkbox" id="log-autoscroll" checked> Авто-скролл
+    </label>
+    <label>
+      <input type="checkbox" id="log-pause"> Пауза
+    </label>
+    <button class="btn-mini secondary outline" type="button" id="log-clear" style="margin-left:auto;">Очистить</button>
+  </div>
+  <pre id="log-pane" class="log-pane"></pre>
+</details>
+
+<script>
+  (function () {
+    const pane = document.getElementById('log-pane');
+    if (!pane) return;
+    const autoscroll = document.getElementById('log-autoscroll');
+    const pause = document.getElementById('log-pause');
+    const clearBtn = document.getElementById('log-clear');
+
+    clearBtn.addEventListener('click', () => { pane.innerHTML = ''; });
+
+    let evt = null;
+    function connect() {
+      if (evt) return;
+      evt = new EventSource('/logs/stream');
+      evt.addEventListener('message', (e) => {
+        if (pause.checked) return;
+        let d;
+        try { d = JSON.parse(e.data); } catch (_) { return; }
+        const div = document.createElement('div');
+        div.className = 'log-line log-' + (d.level || 'info').toLowerCase();
+        div.textContent = `${d.time} ${(d.level || '').padEnd(7)} ${d.msg}`;
+        pane.appendChild(div);
+        while (pane.children.length > 300) pane.firstChild.remove();
+        if (autoscroll.checked) pane.scrollTop = pane.scrollHeight;
+      });
+      evt.addEventListener('error', () => {
+        // Browser will auto-reconnect; no-op.
+      });
+    }
+    // Connect lazily when section is opened (saves resources, prevents
+    // surprise long-lived connection during background tab work).
+    const details = pane.closest('details');
+    details.addEventListener('toggle', () => {
+      if (details.open) connect();
+    });
+    if (details.open) connect();
+  })();
+</script>
+{% endblock %}

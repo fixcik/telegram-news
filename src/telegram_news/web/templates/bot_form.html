@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == "new" %}Новый бот{% else %}{{ bot.name }} — редактирование{% endif %} · telegram-news{% endblock %}
+{% block content %}
+<div class="section-head">
+  <div>
+    <h2>{% if mode == "new" %}Новый бот{% else %}{{ bot.name }}{% endif %}</h2>
+    <div class="subtitle">
+      {% if mode == "new" %}Токен возьми у <code>@BotFather</code> через <code>/newbot</code>{% else %}Замена токена{% endif %}
+    </div>
+  </div>
+  <a href="/bots" role="button" class="btn-mini secondary outline">← Назад</a>
+</div>
+
+{% if error %}
+  <div class="flash flash-error">{{ error }}</div>
+{% endif %}
+
+<form method="post" action="{% if mode == 'new' %}/bots/new{% else %}/bots/{{ bot.name }}/edit{% endif %}">
+  <label>
+    Имя
+    <input type="text" name="name" required
+           value="{{ bot.name if bot else '' }}"
+           {% if mode == 'edit' %}readonly{% endif %}>
+    <small>Внутреннее имя для ссылок из групп. Не меняется при редактировании.</small>
+  </label>
+
+  <label>
+    Токен
+    <input type="text" name="token" required
+           placeholder="1234567890:AAH...">
+    {% if mode == 'edit' %}
+      <small>Старый токен будет полностью заменён.</small>
+    {% else %}
+      <small>Не забудь сделать бота админом в каналах с правом «Post Messages».</small>
+    {% endif %}
+  </label>
+
+  <div class="row-actions" style="margin-top: 1rem;">
+    <button type="submit" class="btn-mini">{% if mode == "new" %}Добавить{% else %}Обновить токен{% endif %}</button>
+    <a href="/bots" role="button" class="btn-mini secondary outline">Отмена</a>
+  </div>
+</form>
+{% endblock %}

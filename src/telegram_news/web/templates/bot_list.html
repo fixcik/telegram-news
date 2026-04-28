@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Боты · telegram-news{% endblock %}
+{% block content %}
+<div class="section-head">
+  <div>
+    <h2>Боты</h2>
+    <div class="subtitle">{{ rows|length }} {% if rows|length == 1 %}бот{% elif 2 <= rows|length <= 4 %}бота{% else %}ботов{% endif %} · токены хранятся в SQLite</div>
+  </div>
+  <a href="/bots/new" role="button" class="btn-mini">+ Новый бот</a>
+</div>
+
+{% if not rows %}
+  <div class="empty-state">
+    <p>Ботов пока нет.</p>
+    <p>Зарегистрируй первого через <a href="/bots/new">+ Новый бот</a>.<br>
+       Токен — у <code>@BotFather</code> командой <code>/newbot</code>.</p>
+  </div>
+{% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Имя</th>
+        <th>Токен</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td><strong>{{ r.name }}</strong></td>
+        <td class="token-mask">{{ r.masked }}</td>
+        <td>
+          <div class="row-actions">
+            <a href="/bots/{{ r.name }}/edit" role="button" class="btn-mini secondary outline">Edit</a>
+            <button class="btn-mini contrast outline"
+                    hx-post="/bots/{{ r.name }}/delete"
+                    hx-confirm="Удалить бота {{ r.name }}?"
+                    hx-target="closest tr"
+                    hx-swap="outerHTML swap:240ms">✕</button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Код · telegram-news{% endblock %}
+{% block content %}
+<article>
+  <header>
+    <h2>Код подтверждения</h2>
+    <p>Код отправлен в Telegram на номер <strong>{{ phone }}</strong>.</p>
+  </header>
+  <form method="post" action="/auth/sign-in">
+    <label>
+      Код из Telegram
+      <input type="text" name="code" required autofocus inputmode="numeric" autocomplete="one-time-code">
+    </label>
+    <button type="submit">Войти</button>
+  </form>
+  <footer>
+    <small><a href="/auth?error=Начали заново">Использовать другой номер</a></small>
+  </footer>
+</article>
+{% endblock %}

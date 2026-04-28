@@ -1,0 +1,32 @@
+schedule:
+  # 5-field POSIX cron: minute hour day-of-month month day-of-week
+  # Default applies to groups that don't override schedule.
+  default_cron: "0 11 * * *"
+  timezone: "Europe/Moscow"
+
+telegram:
+  session_path: "data/session"
+
+openrouter:
+  # Дефолт — быстрая non-reasoning модель: не жжёт токены на CoT,
+  # отвечает за секунды даже на большой prompt. Альтернативы:
+  #   - "google/gemini-2.5-flash"      (дёшево, но иногда thinks дольше нужного)
+  #   - "anthropic/claude-haiku-4-5"   (надёжно, чуть дороже)
+  #   - "deepseek/deepseek-chat-v3.1"  (если хочется DeepSeek без reasoning)
+  #   - "deepseek/deepseek-v4-flash"   (reasoning, нужен max_tokens >= 10000)
+  model: "deepseek/deepseek-chat-v3.1"
+  base_url: "https://openrouter.ai/api/v1"
+  temperature: 0.3
+  max_tokens: 20000
+  request_timeout_s: 180 # отбиваем зависшие запросы (по умолчанию 3 минуты)
+
+fetcher:
+  max_messages_per_channel: 200
+  max_age_days: 2
+
+storage:
+  db_path: "data/state.db"
+
+web:
+  host: "127.0.0.1"
+  port: 8080

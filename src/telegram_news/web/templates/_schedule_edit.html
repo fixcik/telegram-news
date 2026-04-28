@@ -1,0 +1,25 @@
+<td class="schedule-cell schedule-editing">
+  <form hx-post="/groups/{{ group.name }}/schedule"
+        hx-target="closest td"
+        hx-swap="outerHTML"
+        style="margin: 0; display: flex; gap: 0.25rem; align-items: center;">
+    {% if group.cron %}
+      <input type="text" name="cron" value="{{ group.cron }}" autofocus
+             style="font-family: var(--pico-font-family-monospace); font-size: 0.82rem; padding: 0.2rem 0.4rem; margin: 0; width: 11rem;">
+      <input type="hidden" name="kind" value="cron">
+    {% else %}
+      <input type="number" step="0.5" min="0.5" name="interval_hours"
+             value="{{ group.interval_hours }}" autofocus
+             style="font-size: 0.82rem; padding: 0.2rem 0.4rem; margin: 0; width: 4.5rem;">
+      <input type="text" name="interval_anchor"
+             value="{{ group.interval_anchor or '' }}" placeholder="HH:MM"
+             style="font-family: var(--pico-font-family-monospace); font-size: 0.82rem; padding: 0.2rem 0.4rem; margin: 0; width: 4.5rem;">
+      <input type="hidden" name="kind" value="interval">
+    {% endif %}
+    <button type="submit" class="btn-mini" style="padding: 0.15rem 0.45rem;">✓</button>
+    <button type="button" class="btn-mini secondary outline" style="padding: 0.15rem 0.45rem;"
+            hx-get="/groups/{{ group.name }}/schedule-cell"
+            hx-target="closest td"
+            hx-swap="outerHTML">✕</button>
+  </form>
+</td>
