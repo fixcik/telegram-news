@@ -44,6 +44,9 @@ CREATE TABLE IF NOT EXISTS groups (
     target TEXT NOT NULL,
     enabled INTEGER NOT NULL DEFAULT 1,
     position INTEGER NOT NULL DEFAULT 0,
+    max_messages_per_channel INTEGER,
+    max_age_days INTEGER,
+    min_message_length INTEGER,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -51,10 +54,17 @@ CREATE TABLE IF NOT EXISTS groups (
 CREATE TABLE IF NOT EXISTS group_channels (
     group_name TEXT NOT NULL REFERENCES groups(name) ON DELETE CASCADE,
     channel TEXT NOT NULL,
+    display_title TEXT,
     position INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (group_name, channel)
 );
 """
+
+
+def _ensure_column(conn: sqlite3.Connection, table: str, column: str, decl: str) -> None:
+    cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    if column not in cols:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
 
 
 def init_db(db_path: str | Path) -> None:
@@ -73,6 +83,10 @@ def init_db(db_path: str | Path) -> None:
                 )
                 conn.execute("DROP TABLE channel_state")
         conn.executescript(SCHEMA)
+        _ensure_column(conn, "groups", "max_messages_per_channel", "INTEGER")
+        _ensure_column(conn, "groups", "max_age_days", "INTEGER")
+        _ensure_column(conn, "groups", "min_message_length", "INTEGER")
+        _ensure_column(conn, "group_channels", "display_title", "TEXT")
 
 
 @contextmanager
