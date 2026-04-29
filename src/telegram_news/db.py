@@ -227,6 +227,20 @@ def _channels_for(conn: sqlite3.Connection, group_name: str) -> list[str]:
     return [r["channel"] for r in rows]
 
 
+def channels_with_titles(db_path: str | Path, group_name: str) -> list[dict]:
+    """Return [{'channel': ..., 'display_title': ...}, ...] in stored order.
+
+    Used by the edit form to render existing chips with titles.
+    """
+    with connect(db_path) as conn:
+        rows = conn.execute(
+            "SELECT channel, display_title FROM group_channels "
+            "WHERE group_name = ? ORDER BY position, channel",
+            (group_name,),
+        ).fetchall()
+    return [{"channel": r["channel"], "display_title": r["display_title"]} for r in rows]
+
+
 def groups_list(db_path: str | Path) -> list[Group]:
     with connect(db_path) as conn:
         rows = conn.execute(
