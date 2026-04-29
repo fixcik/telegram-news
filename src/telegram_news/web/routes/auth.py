@@ -101,6 +101,12 @@ async def auth_sign_in(
     scheduler_ctl = request.app.state.scheduler_ctl
     scheduler_ctl.populate_all(load_groups_for_runtime(cfg.storage.db_path))
     log.info("User authenticated; scheduler populated from DB")
+    cache = getattr(request.app.state, "dialog_cache", None)
+    if cache is not None:
+        try:
+            await cache.refresh(request.app.state.client)
+        except Exception:
+            log.exception("Dialog cache refresh after auth failed")
     return RedirectResponse("/?flash=Авторизация успешна", status_code=303)
 
 
