@@ -34,7 +34,7 @@
     </label>
     <input type="text" name="cron"
            placeholder="0 11 * * *"
-           value="{{ group.cron or '' if group else '' }}">
+           value="{{ group.cron if group and group.cron else (request.app.state.cfg.schedule.default_cron if mode == 'new' else '') }}">
     <small>Примеры: <code>0 11 * * *</code> (ежедневно 11:00), <code>0 9,21 * * *</code> (дважды в день), <code>0 10 * * 1-5</code> (по будням)</small>
 
     <label style="font-weight: 400; margin-top: 0.8rem;">

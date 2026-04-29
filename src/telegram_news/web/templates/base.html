@@ -103,6 +103,21 @@
     form fieldset legend { font-size: 0.85rem; font-weight: 600; padding: 0 0.4rem; color: var(--pico-muted-color); }
     form small { color: var(--pico-muted-color); font-size: 0.78rem; }
 
+    /* Inline form messages (flash + flash-error). Used at top of forms. */
+    .flash {
+      padding: 0.6rem 0.85rem;
+      border-radius: var(--pico-border-radius);
+      background: var(--pico-secondary-background);
+      border-left: 3px solid var(--pico-primary);
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
+    .flash-error {
+      background: rgba(204, 102, 102, 0.12);
+      border-left-color: var(--pico-del-color, #cc6666);
+      color: var(--pico-color);
+    }
+
     /* Empty state */
     .empty-state {
       text-align: center;
@@ -246,17 +261,28 @@
       font-size: 0.78rem;
     }
     .chat-picker .chip > button {
-      all: unset;
+      /* Explicit reset — `all: unset` doesn't override Pico's higher-specificity
+         per-property rules for <button>, which would leave Pico's padding/bg
+         in place and make the hit area swallow the whole chip. */
+      appearance: none;
+      box-sizing: border-box;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 1.05rem;
-      height: 1.05rem;
+      width: 1.25rem;
+      height: 1.25rem;
+      padding: 0;
+      margin: 0 0 0 0.1rem;
+      border: 0;
+      background: transparent;
       border-radius: 999px;
-      font-size: 0.7rem;
+      font-size: 0.72rem;
+      line-height: 1;
       color: var(--pico-muted-color);
       transition: background 120ms ease, color 120ms ease;
+      /* Make sure the hit area is contained — pointer events on this element only. */
+      flex: 0 0 auto;
     }
     .chat-picker .chip > button:hover {
       background: var(--pico-del-color, #cc6666);
@@ -266,6 +292,8 @@
       outline: 2px solid var(--pico-primary);
       outline-offset: 1px;
     }
+    /* Make the chip body explicitly non-interactive — only the X button removes. */
+    .chat-picker .chip { cursor: default; }
 
     /* Tabs row */
     .chat-picker .picker-tabs {
