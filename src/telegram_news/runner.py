@@ -32,6 +32,10 @@ async def run_group(cfg: Config, client: TelegramClient, group: Group) -> None:
     max_id_by_channel: dict[str, int] = {}
     fetch_failed = False
 
+    max_msgs = group.max_messages_per_channel or cfg.fetcher.max_messages_per_channel
+    max_age = group.max_age_days or cfg.fetcher.max_age_days
+    min_len = group.min_message_length if group.min_message_length is not None else 20
+
     for channel in group.channels:
         last_id = get_last_message_id(cfg.storage.db_path, group.name, channel)
         try:
@@ -39,8 +43,9 @@ async def run_group(cfg: Config, client: TelegramClient, group: Group) -> None:
                 client,
                 channel,
                 last_id,
-                cfg.fetcher.max_messages_per_channel,
-                cfg.fetcher.max_age_days,
+                max_msgs,
+                max_age,
+                min_len,
             )
         except Exception:
             log.exception("Fetch failed for %s in group %s", channel, group.name)
