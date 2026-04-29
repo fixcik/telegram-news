@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -17,6 +19,15 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _format_last_digest(raw: str | None, tz_name: str) -> str:
+    # SQLite CURRENT_TIMESTAMP is naive UTC ("YYYY-MM-DD HH:MM:SS").
+    # Convert to the configured timezone so the UI matches the "Next run" column.
+    if not raw:
+        return "—"
+    dt = datetime.strptime(raw, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    return dt.astimezone(ZoneInfo(tz_name)).strftime("%Y-%m-%d %H:%M %Z")
+
+
 def _row_data(cfg, scheduler_ctl, g):
     next_run = scheduler_ctl.next_run_time(g.name)
     return {
@@ -25,7 +36,9 @@ def _row_data(cfg, scheduler_ctl, g):
         "channels": g.channels,
         "bot": g.bot,
         "target": g.target,
-        "last_digest_at": last_digest_at(cfg.storage.db_path, g.name) or "—",
+        "last_digest_at": _format_last_digest(
+            last_digest_at(cfg.storage.db_path, g.name), cfg.schedule.timezone,
+        ),
         "next_run": next_run.strftime("%Y-%m-%d %H:%M %Z") if next_run else "—",
         "group": g,
     }
@@ -90,7 +103,9 @@ async def cell_next_run(name: str, request: Request):
 @router.get("/groups/{name}/cells/last-digest", response_class=HTMLResponse)
 async def cell_last_digest(name: str, request: Request):
     cfg = request.app.state.cfg
-    text = last_digest_at(cfg.storage.db_path, name) or "—"
+    text = _format_last_digest(
+        last_digest_at(cfg.storage.db_path, name), cfg.schedule.timezone,
+    )
     return request.app.state.templates.TemplateResponse(
         request, "_last_digest_cell.html", {"name": name, "text": text},
     )

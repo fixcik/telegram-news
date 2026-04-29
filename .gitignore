@@ -9,4 +9,5 @@ data/
 dist/
 build/
 *.egg-info/
+deploy/
 !CLAUDE.md
