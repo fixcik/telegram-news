@@ -17,6 +17,15 @@ dependencies = [
     "python-multipart>=0.0.9",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
 [project.scripts]
 telegram-news = "telegram_news.__main__:app"
 
