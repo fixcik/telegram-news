@@ -9,22 +9,15 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ...config import Group, validate_anchor
-from ...db import bots_list, groups_delete, groups_get, groups_upsert
+from ...db import (
+    bots_list, channels_with_titles, groups_delete, groups_get, groups_upsert,
+)
 from ...scheduler_ctl import describe_schedule
 from ..htmx import htmx_response, is_htmx
 
 log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/groups")
-
-
-def _split_channels(raw: str) -> list[str]:
-    out: list[str] = []
-    for line in raw.splitlines():
-        s = line.strip()
-        if s:
-            out.append(s)
-    return out
 
 
 def _build_group_from_form(
@@ -35,11 +28,18 @@ def _build_group_from_form(
     interval_anchor: str,
     interests: str,
     instructions: str,
-    channels_raw: str,
     bot: str,
-    target: str,
-) -> tuple[Group, str | None]:
-    """Returns (group, error_message). On success error is None."""
+    target_peer: str,
+    target_original: str,
+    target_title: str,
+    channel_peers: list[str],
+    channel_originals: list[str],
+    channel_titles: list[str],
+    max_messages: str,
+    max_age: str,
+    min_length: str,
+) -> tuple[Group | None, list[str], list[str], str | None]:
+    """Returns (group, original_channels_parallel, display_titles_parallel, error)."""
     cron_v: str | None = None
     interval_v: float | None = None
     anchor_v: str | None = None
@@ -47,51 +47,93 @@ def _build_group_from_form(
     if schedule_kind == "cron":
         cron = cron.strip()
         if not cron:
-            return None, "Поле cron пустое"
+            return None, [], [], "Поле cron пустое"
         try:
             CronTrigger.from_crontab(cron)
         except ValueError as e:
-            return None, f"Невалидный cron: {e}"
+            return None, [], [], f"Невалидный cron: {e}"
         cron_v = cron
     elif schedule_kind == "interval":
         if not interval_hours.strip():
-            return None, "Поле interval_hours пустое"
+            return None, [], [], "Поле interval_hours пустое"
         try:
             interval_v = float(interval_hours)
         except ValueError:
-            return None, f"interval_hours должен быть числом, получено {interval_hours!r}"
+            return None, [], [], f"interval_hours должен быть числом, получено {interval_hours!r}"
         if interval_v <= 0:
-            return None, "interval_hours должен быть > 0"
+            return None, [], [], "interval_hours должен быть > 0"
         if interval_anchor.strip():
             try:
                 anchor_v = validate_anchor(interval_anchor.strip())
             except ValueError as e:
-                return None, str(e)
+                return None, [], [], str(e)
     else:
-        return None, f"Неизвестный schedule_kind: {schedule_kind!r}"
+        return None, [], [], f"Неизвестный schedule_kind: {schedule_kind!r}"
 
-    channels = _split_channels(channels_raw)
-    if not channels:
-        return None, "Список каналов пустой — добавь хотя бы один (по строке)"
+    if not channel_peers:
+        return None, [], [], "Не выбран ни один источник"
+    if len(channel_peers) != len(channel_originals) or len(channel_peers) != len(channel_titles):
+        return None, [], [], "Внутренняя ошибка формы: длины списков не совпадают"
 
     if not name.strip():
-        return None, "Имя группы пустое"
+        return None, [], [], "Имя группы пустое"
     if not bot.strip():
-        return None, "Не выбран бот"
-    if not target.strip():
-        return None, "Канал-цель не задан"
+        return None, [], [], "Не выбран бот"
+    if not target_peer.strip():
+        return None, [], [], "Канал-цель не задан"
 
-    return Group(
+    def _maybe_int(s: str, ctx: str) -> int | None:
+        s = s.strip()
+        if not s:
+            return None
+        try:
+            v = int(s)
+        except ValueError:
+            raise ValueError(f"{ctx}: ожидается целое число, получено {s!r}")
+        if v < 0:
+            raise ValueError(f"{ctx}: должно быть >= 0")
+        return v
+
+    try:
+        max_msgs_v = _maybe_int(max_messages, "max_messages_per_channel")
+        max_age_v = _maybe_int(max_age, "max_age_days")
+        min_len_v = _maybe_int(min_length, "min_message_length")
+    except ValueError as e:
+        return None, [], [], str(e)
+
+    group = Group(
         name=name.strip(),
         interests=interests,
-        channels=channels,
+        channels=channel_peers,
         bot=bot.strip(),
-        target=target.strip(),
+        target=target_peer.strip(),
         cron=cron_v,
         interval_hours=interval_v,
         interval_anchor=anchor_v,
         instructions=instructions.strip() or None,
-    ), None
+        max_messages_per_channel=max_msgs_v,
+        max_age_days=max_age_v,
+        min_message_length=min_len_v,
+    )
+    return group, channel_originals, channel_titles, None
+
+
+def _annotate_group_for_form(db_path, group: Group | None) -> Group | None:
+    if group is None:
+        return None
+    rows = channels_with_titles(db_path, group.name)
+    resolved = []
+    for r in rows:
+        resolved.append({
+            "peer_id": r["channel"],
+            "title": r["display_title"] or r["channel"],
+            "username": None,
+            "kind": "channel",
+            "original": r["channel"],
+        })
+    group.resolved_channels = resolved
+    group.target_title = group.target  # title not yet cached for target
+    return group
 
 
 def _render_form(
@@ -102,11 +144,13 @@ def _render_form(
     bots: list,
     error: str | None = None,
 ):
+    cfg = request.app.state.cfg
+    annotated = _annotate_group_for_form(cfg.storage.db_path, group)
     return request.app.state.templates.TemplateResponse(
         request, "group_form.html",
         {
             "mode": mode,
-            "group": group,
+            "group": annotated,
             "bots": bots,
             "error": error,
         },
@@ -135,16 +179,26 @@ async def new_submit(
     interval_anchor: str = Form(""),
     interests: str = Form(""),
     instructions: str = Form(""),
-    channels: str = Form(""),
     bot: str = Form(...),
-    target: str = Form(...),
+    target_peer: str = Form(...),
+    target_peer__original: str = Form(""),
+    target_peer__title: str = Form(""),
+    channel_peers: list[str] = Form(default=[]),
+    channel_peers__original: list[str] = Form(default=[]),
+    channel_peers__title: list[str] = Form(default=[]),
+    max_messages_per_channel: str = Form(""),
+    max_age_days: str = Form(""),
+    min_message_length: str = Form(""),
 ):
     cfg = request.app.state.cfg
     bots = bots_list(cfg.storage.db_path)
 
-    group, err = _build_group_from_form(
+    group, originals, titles, err = _build_group_from_form(
         name, schedule_kind, cron, interval_hours, interval_anchor,
-        interests, instructions, channels, bot, target,
+        interests, instructions, bot,
+        target_peer, target_peer__original, target_peer__title,
+        channel_peers, channel_peers__original, channel_peers__title,
+        max_messages_per_channel, max_age_days, min_message_length,
     )
     if err:
         return _render_form(request, mode="new", group=None, bots=bots, error=err)
@@ -155,7 +209,10 @@ async def new_submit(
             error=f"Группа с именем '{group.name}' уже существует",
         )
 
-    groups_upsert(cfg.storage.db_path, group)
+    groups_upsert(
+        cfg.storage.db_path, group,
+        original_channels=originals, display_titles=titles,
+    )
     request.app.state.scheduler_ctl.add_group(group)
     return RedirectResponse(
         f"/?flash={quote(f'Группа {group.name} создана')}", status_code=303,
@@ -184,9 +241,16 @@ async def edit_submit(
     interval_anchor: str = Form(""),
     interests: str = Form(""),
     instructions: str = Form(""),
-    channels: str = Form(""),
     bot: str = Form(...),
-    target: str = Form(...),
+    target_peer: str = Form(...),
+    target_peer__original: str = Form(""),
+    target_peer__title: str = Form(""),
+    channel_peers: list[str] = Form(default=[]),
+    channel_peers__original: list[str] = Form(default=[]),
+    channel_peers__title: list[str] = Form(default=[]),
+    max_messages_per_channel: str = Form(""),
+    max_age_days: str = Form(""),
+    min_message_length: str = Form(""),
 ):
     cfg = request.app.state.cfg
     bots = bots_list(cfg.storage.db_path)
@@ -196,16 +260,21 @@ async def edit_submit(
             f"/?error={quote(f'Группа {name} не найдена')}", status_code=303,
         )
 
-    group, err = _build_group_from_form(
+    group, originals, titles, err = _build_group_from_form(
         name, schedule_kind, cron, interval_hours, interval_anchor,
-        interests, instructions, channels, bot, target,
+        interests, instructions, bot,
+        target_peer, target_peer__original, target_peer__title,
+        channel_peers, channel_peers__original, channel_peers__title,
+        max_messages_per_channel, max_age_days, min_message_length,
     )
     if err:
-        # Re-render with error; pass the original group so name field stays disabled.
         existing = groups_get(cfg.storage.db_path, name)
         return _render_form(request, mode="edit", group=existing, bots=bots, error=err)
 
-    groups_upsert(cfg.storage.db_path, group)
+    groups_upsert(
+        cfg.storage.db_path, group,
+        original_channels=originals, display_titles=titles,
+    )
     request.app.state.scheduler_ctl.update_group(group)
     return RedirectResponse(
         f"/?flash={quote(f'Группа {group.name} обновлена')}", status_code=303,
