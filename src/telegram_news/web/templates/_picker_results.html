@@ -1,0 +1,18 @@
+{# Variables: items (list of CachedDialog) #}
+{% if not items %}
+  <div class="picker-empty">Ничего не найдено</div>
+{% else %}
+  {% for d in items %}
+    {% set icon = '📢' if d.kind == 'channel' else '👥' %}
+    <div class="picker-result"
+         tabindex="0"
+         data-peer-id="{{ d.peer_id }}"
+         data-title="{{ d.title }}"
+         data-username="{{ d.username or '' }}"
+         data-kind="{{ d.kind }}">
+      <span class="picker-result-icon">{{ icon }}</span>
+      <span class="picker-result-title">{{ d.title }}</span>
+      {% if d.username %}<small>@{{ d.username }}</small>{% endif %}
+    </div>
+  {% endfor %}
+{% endif %}
