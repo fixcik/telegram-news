@@ -69,3 +69,40 @@ def parse_link(raw: str) -> tuple[Literal["username", "peer_id"], object]:
         return ("username", m.group(1))
 
     raise ParseError(f"could not interpret as Telegram link: {s!r}")
+
+
+from telethon.tl.types import PeerChannel  # noqa: E402  (kept here to localise the dependency)
+
+
+async def resolve(client: "TelegramClient", raw: str) -> ResolvedPeer:
+    """Parse + Telethon lookup. Raises ParseError on bad input,
+    RuntimeError on lookup failure with user-friendly message."""
+    kind_tag, value = parse_link(raw)
+
+    try:
+        if kind_tag == "username":
+            entity = await client.get_entity(f"@{value}")
+        else:
+            internal_id = abs(int(value)) - 1_000_000_000_000
+            entity = await client.get_entity(PeerChannel(internal_id))
+    except (ValueError, TypeError) as e:
+        raise RuntimeError(
+            "chat not visible to current session — add it via 'From my chats'"
+        ) from e
+
+    if getattr(entity, "broadcast", False):
+        kind: Literal["channel", "megagroup", "chat"] = "channel"
+    elif getattr(entity, "megagroup", False):
+        kind = "megagroup"
+    else:
+        kind = "chat"
+
+    title = getattr(entity, "title", None) or getattr(entity, "username", None) or str(entity.id)
+    username = getattr(entity, "username", None)
+
+    if kind in ("channel", "megagroup"):
+        peer_id = -1_000_000_000_000 - entity.id
+    else:
+        peer_id = -entity.id
+
+    return ResolvedPeer(peer_id=peer_id, title=title, username=username, kind=kind)
