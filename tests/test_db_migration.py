@@ -79,3 +79,36 @@ def test_init_db_migrates_legacy_groups_table(tmp_path):
     with sqlite3.connect(db) as conn:
         row = conn.execute("SELECT name FROM groups").fetchone()
     assert row[0] == "g1"
+
+
+from telegram_news.config import Group
+from telegram_news.db import (
+    bots_upsert, groups_upsert, get_last_message_id, set_last_message_id,
+)
+
+
+def test_groups_upsert_renames_cursor(tmp_path):
+    """When channels rename from '@foo' to '-100123', the cursor follows."""
+    db = tmp_path / "state.db"
+    init_db(db)
+    bots_upsert(db, "b1", "tok")
+    g = Group(
+        name="g1", interests="x", channels=["@foo", "@bar"],
+        bot="b1", target="@t", cron="0 11 * * *",
+    )
+    groups_upsert(db, g)
+    set_last_message_id(db, "g1", "@foo", 100)
+    set_last_message_id(db, "g1", "@bar", 200)
+
+    g2 = Group(
+        name="g1", interests="x", channels=["-1001234567890", "@bar"],
+        bot="b1", target="@t", cron="0 11 * * *",
+    )
+    groups_upsert(
+        db, g2,
+        original_channels=["@foo", "@bar"],
+    )
+
+    assert get_last_message_id(db, "g1", "-1001234567890") == 100
+    assert get_last_message_id(db, "g1", "@bar") == 200
+    assert get_last_message_id(db, "g1", "@foo") == 0
