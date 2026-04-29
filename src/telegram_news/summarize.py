@@ -107,10 +107,22 @@ async def summarize_group(
     choice = resp.choices[0]
     content = (choice.message.content or "").strip()
     if not content:
-        log.warning(
-            "LLM returned empty content for group=%s. finish_reason=%s usage=%s",
-            group.name, choice.finish_reason, resp.usage,
-        )
+        # DeepSeek v3.1 (hybrid reasoning) on OpenRouter sometimes routes the
+        # actual answer into `message.reasoning` while leaving `content` empty —
+        # fall back to it before giving up.
+        extra = choice.message.model_extra or {}
+        fallback = (extra.get("reasoning") or extra.get("reasoning_content") or "").strip()
+        if fallback:
+            log.warning(
+                "LLM content empty for group=%s — using 'reasoning' fallback (len=%d)",
+                group.name, len(fallback),
+            )
+            content = fallback
+        else:
+            log.warning(
+                "LLM returned empty content for group=%s. finish_reason=%s usage=%s extra_keys=%s",
+                group.name, choice.finish_reason, resp.usage, list(extra.keys()),
+            )
     else:
         log.info(
             "LLM ok group=%s finish=%s tokens=%s/%s",
