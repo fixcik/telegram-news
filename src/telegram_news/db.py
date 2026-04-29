@@ -212,6 +212,9 @@ def _row_to_group(row: sqlite3.Row, channels: list[str]) -> Group:
         interval_hours=row["interval_hours"],
         interval_anchor=row["interval_anchor"],
         instructions=row["instructions"],
+        max_messages_per_channel=row["max_messages_per_channel"],
+        max_age_days=row["max_age_days"],
+        min_message_length=row["min_message_length"],
     )
 
 
@@ -248,8 +251,10 @@ def groups_upsert(db_path: str | Path, group: Group) -> None:
         conn.execute(
             """
             INSERT INTO groups(name, cron, interval_hours, interval_anchor,
-                               interests, instructions, bot_name, target)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                               interests, instructions, bot_name, target,
+                               max_messages_per_channel, max_age_days,
+                               min_message_length)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(name) DO UPDATE SET
                 cron = excluded.cron,
                 interval_hours = excluded.interval_hours,
@@ -258,6 +263,9 @@ def groups_upsert(db_path: str | Path, group: Group) -> None:
                 instructions = excluded.instructions,
                 bot_name = excluded.bot_name,
                 target = excluded.target,
+                max_messages_per_channel = excluded.max_messages_per_channel,
+                max_age_days = excluded.max_age_days,
+                min_message_length = excluded.min_message_length,
                 updated_at = CURRENT_TIMESTAMP
             """,
             (
@@ -269,6 +277,9 @@ def groups_upsert(db_path: str | Path, group: Group) -> None:
                 group.instructions,
                 group.bot,
                 group.target,
+                group.max_messages_per_channel,
+                group.max_age_days,
+                group.min_message_length,
             ),
         )
         conn.execute("DELETE FROM group_channels WHERE group_name = ?", (group.name,))

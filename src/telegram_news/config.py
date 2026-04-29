@@ -67,6 +67,9 @@ class Group:
     interval_hours: float | None = None
     interval_anchor: str | None = None
     instructions: str | None = None
+    max_messages_per_channel: int | None = None
+    max_age_days: int | None = None
+    min_message_length: int | None = None
 
 
 @dataclass
