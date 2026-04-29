@@ -1,0 +1,54 @@
+{#
+  Variables in scope:
+    name      — form field base name ("channel_peers" or "target_peer")
+    mode      — "single" | "multi"
+    selected  — list of {peer_id, title, username, kind, original}
+                (already-stored entries on edit forms; empty list on new)
+#}
+<div class="chat-picker"
+     data-name="{{ name }}"
+     data-mode="{{ mode }}">
+
+  <div class="chip-list" id="picker-{{ name }}-chips">
+    {% for s in selected %}
+      {% set peer_obj = {'peer_id': s.peer_id, 'title': s.title, 'username': s.username, 'kind': s.kind} %}
+      {% with peer=peer_obj, name=name, original=s.original %}
+        {% include "_chip.html" %}
+      {% endwith %}
+    {% endfor %}
+  </div>
+
+  <div class="picker-tabs" role="tablist">
+    <button type="button" class="picker-tab active" data-tab="dialogs">Из моих чатов</button>
+    <button type="button" class="picker-tab" data-tab="link">По ссылке</button>
+    <button type="button" class="picker-refresh"
+            hx-post="/api/dialogs/refresh"
+            hx-swap="none"
+            title="Перечитать список чатов">🔄</button>
+  </div>
+
+  <div class="picker-pane" data-pane="dialogs">
+    <input type="text"
+           class="picker-search"
+           placeholder="Поиск по своим чатам…"
+           autocomplete="off"
+           hx-get="/api/dialogs"
+           hx-trigger="keyup changed delay:200ms, focus"
+           hx-target="#picker-{{ name }}-results"
+           hx-include="closest .chat-picker"
+           hx-vals='js:{"q": event.target.value, "exclude": Array.from(document.querySelectorAll("#picker-{{ name }}-chips [data-peer-id]")).map(e=>e.dataset.peerId).join(",")}'>
+    <div class="picker-results" id="picker-{{ name }}-results"></div>
+  </div>
+
+  <div class="picker-pane hidden" data-pane="link">
+    <input type="text" name="link" class="picker-link-input" placeholder="@username, t.me/foo, t.me/c/123/456 или -1001234567890">
+    <button type="button"
+            class="picker-link-add"
+            hx-post="/api/resolve"
+            hx-target="#picker-{{ name }}-chips"
+            hx-swap="beforeend"
+            hx-include="previous .picker-link-input"
+            hx-vals='{"name": "{{ name }}"}'>Добавить</button>
+    <div class="picker-link-error"></div>
+  </div>
+</div>
