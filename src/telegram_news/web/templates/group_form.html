@@ -69,17 +69,22 @@
       </select>
     </label>
     <label>
-      Канал-цель
-      <input type="text" name="target" required
-             placeholder="@my_crypto_digest или -1001234567890"
-             value="{{ group.target if group else '' }}">
+      Канал-цель (куда постить дайджест)
+      {% set target_selected = [] %}
+      {% if group and group.target %}
+        {% set target_selected = [{'peer_id': group.target, 'title': (group.target_title or group.target), 'username': none, 'kind': 'channel', 'original': group.target}] %}
+      {% endif %}
+      {% with name='target_peer', mode='single', selected=target_selected %}
+        {% include "_chat_picker.html" %}
+      {% endwith %}
     </label>
   </div>
 
   <label>
     Каналы-источники
-    <textarea name="channels" rows="5" required placeholder="@channel_one&#10;@channel_two">{% if group %}{{ group.channels | join('\n') }}{% endif %}</textarea>
-    <small>По одному на строку</small>
+    {% with name='channel_peers', mode='multi', selected=(group.resolved_channels if group else []) %}
+      {% include "_chat_picker.html" %}
+    {% endwith %}
   </label>
 
   <label>
@@ -92,6 +97,30 @@
     Инструкции для LLM <small style="font-weight: 400;">(опционально)</small>
     <textarea name="instructions" rows="3" placeholder="Например: после каждого буллета добавляй своё мнение в скобках начиная с 💭">{{ group.instructions or '' if group else '' }}</textarea>
   </label>
+
+  <fieldset>
+    <legend>Лимиты (опционально, переопределяют глобальные дефолты)</legend>
+    <div class="grid">
+      <label style="font-weight: 400;">
+        <small>Сообщений на канал</small>
+        <input type="number" min="1" name="max_messages_per_channel"
+               placeholder="200"
+               value="{{ group.max_messages_per_channel or '' if group else '' }}">
+      </label>
+      <label style="font-weight: 400;">
+        <small>Дней назад</small>
+        <input type="number" min="1" name="max_age_days"
+               placeholder="2"
+               value="{{ group.max_age_days or '' if group else '' }}">
+      </label>
+      <label style="font-weight: 400;">
+        <small>Мин. длина сообщения</small>
+        <input type="number" min="0" name="min_message_length"
+               placeholder="20"
+               value="{{ group.min_message_length if group and group.min_message_length is not none else '' }}">
+      </label>
+    </div>
+  </fieldset>
 
   <div class="row-actions" style="margin-top: 1.2rem;">
     <button type="submit" class="btn-mini">{% if mode == "new" %}Создать{% else %}Сохранить{% endif %}</button>
