@@ -29,14 +29,16 @@
 
   <div class="picker-pane" data-pane="dialogs">
     <input type="text"
+           name="q"
            class="picker-search"
            placeholder="Поиск по своим чатам…"
            autocomplete="off"
+           form="picker-noop"
            hx-get="/api/dialogs"
            hx-trigger="keyup changed delay:200ms, focus"
            hx-target="#picker-{{ name }}-results"
-           hx-include="closest .chat-picker"
-           hx-vals='js:{"q": event.target.value, "exclude": Array.from(document.querySelectorAll("#picker-{{ name }}-chips [data-peer-id]")).map(e=>e.dataset.peerId).join(",")}'>
+           hx-include="this"
+           hx-vals='js:{"exclude": Array.from(document.querySelectorAll("#picker-{{ name }}-chips [data-peer-id]")).map(e=>e.dataset.peerId).join(",")}'>
     <div class="picker-results" id="picker-{{ name }}-results"></div>
   </div>
 
