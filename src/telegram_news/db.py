@@ -245,8 +245,24 @@ def groups_get(db_path: str | Path, name: str) -> Group | None:
         return _row_to_group(row, _channels_for(conn, name))
 
 
-def groups_upsert(db_path: str | Path, group: Group) -> None:
-    """Insert or update a group, replacing its channels list."""
+def groups_upsert(
+    db_path: str | Path,
+    group: Group,
+    original_channels: list[str] | None = None,
+    display_titles: list[str | None] | None = None,
+) -> None:
+    """Insert or update a group, replacing its channels list.
+
+    `original_channels`: parallel to `group.channels`. For each i where
+    `original_channels[i]` is non-empty and differs from `group.channels[i]`,
+    the channel_state cursor row is renamed in place so we don't re-fetch.
+    `display_titles`: parallel cached titles, written into group_channels.display_title.
+    """
+    if original_channels is not None and len(original_channels) != len(group.channels):
+        raise ValueError("original_channels length must match group.channels")
+    if display_titles is not None and len(display_titles) != len(group.channels):
+        raise ValueError("display_titles length must match group.channels")
+
     with connect(db_path) as conn:
         conn.execute(
             """
@@ -269,25 +285,28 @@ def groups_upsert(db_path: str | Path, group: Group) -> None:
                 updated_at = CURRENT_TIMESTAMP
             """,
             (
-                group.name,
-                group.cron,
-                group.interval_hours,
-                group.interval_anchor,
-                group.interests,
-                group.instructions,
-                group.bot,
-                group.target,
-                group.max_messages_per_channel,
-                group.max_age_days,
-                group.min_message_length,
+                group.name, group.cron, group.interval_hours, group.interval_anchor,
+                group.interests, group.instructions, group.bot, group.target,
+                group.max_messages_per_channel, group.max_age_days, group.min_message_length,
             ),
         )
+
+        if original_channels is not None:
+            for new_ch, old_ch in zip(group.channels, original_channels):
+                if old_ch and old_ch != new_ch:
+                    conn.execute(
+                        "UPDATE channel_state SET channel = ? "
+                        "WHERE group_name = ? AND channel = ?",
+                        (new_ch, group.name, old_ch),
+                    )
+
         conn.execute("DELETE FROM group_channels WHERE group_name = ?", (group.name,))
         for pos, ch in enumerate(group.channels):
+            title = display_titles[pos] if display_titles is not None else None
             conn.execute(
-                "INSERT INTO group_channels(group_name, channel, position) "
-                "VALUES (?, ?, ?)",
-                (group.name, ch, pos),
+                "INSERT INTO group_channels(group_name, channel, display_title, position) "
+                "VALUES (?, ?, ?, ?)",
+                (group.name, ch, title, pos),
             )
 
 
