@@ -37,13 +37,22 @@ SYSTEM_PROMPT = """\
 - В обычном тексте символы '<', '>' и '&' заменяй на '&lt;', '&gt;', '&amp;'.
 - В URL внутри href ничего не экранируй — копируй как есть.
 - Не вкладывай теги-ссылки друг в друга.
+
+Среди источников могут быть групповые чаты — у их сообщений в заголовке указан \
+автор в формате `[Имя]`. Используй имена когда это помогает раскрыть контекст \
+обсуждения (например: «Иван предложил X, Петя возразил»), опускай когда не нужно. \
+Реплаи помечены символом ↳ в начале текста.
 """
 
 
 def _format_messages_for_prompt(messages: list[Message]) -> str:
     lines: list[str] = []
     for m in messages:
-        lines.append(f"[{m.channel} | {m.date:%Y-%m-%d %H:%M} | {m.link}]")
+        header = f"[{m.channel_title} | {m.date:%Y-%m-%d %H:%M}"
+        if m.sender_name:
+            header += f" | {m.sender_name}"
+        header += f" | {m.link}]"
+        lines.append(header)
         lines.append(m.text)
         lines.append("---")
     return "\n".join(lines)
