@@ -8,13 +8,12 @@ telegram:
   session_path: "data/session"
 
 openrouter:
-  # Дефолт — быстрая non-reasoning модель: не жжёт токены на CoT,
-  # отвечает за секунды даже на большой prompt. Альтернативы:
+  # Дефолт — DeepSeek v4 flash (reasoning, требует max_tokens >= 10000).
+  # Альтернативы:
+  #   - "deepseek/deepseek-chat-v3.1"  (non-reasoning DeepSeek, быстрее)
   #   - "google/gemini-2.5-flash"      (дёшево, но иногда thinks дольше нужного)
   #   - "anthropic/claude-haiku-4-5"   (надёжно, чуть дороже)
-  #   - "deepseek/deepseek-chat-v3.1"  (если хочется DeepSeek без reasoning)
-  #   - "deepseek/deepseek-v4-flash"   (reasoning, нужен max_tokens >= 10000)
-  model: "deepseek/deepseek-chat-v3.1"
+  model: "deepseek/deepseek-v4-flash"
   base_url: "https://openrouter.ai/api/v1"
   temperature: 0.3
   max_tokens: 20000
