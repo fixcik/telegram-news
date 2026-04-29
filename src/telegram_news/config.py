@@ -70,6 +70,7 @@ class Group:
     max_messages_per_channel: int | None = None
     max_age_days: int | None = None
     min_message_length: int | None = None
+    target_title: str | None = None
 
 
 @dataclass

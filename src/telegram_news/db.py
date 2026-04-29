@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS groups (
     instructions TEXT,
     bot_name TEXT NOT NULL REFERENCES bots(name),
     target TEXT NOT NULL,
+    target_title TEXT,
     enabled INTEGER NOT NULL DEFAULT 1,
     position INTEGER NOT NULL DEFAULT 0,
     max_messages_per_channel INTEGER,
@@ -86,6 +87,7 @@ def init_db(db_path: str | Path) -> None:
         _ensure_column(conn, "groups", "max_messages_per_channel", "INTEGER")
         _ensure_column(conn, "groups", "max_age_days", "INTEGER")
         _ensure_column(conn, "groups", "min_message_length", "INTEGER")
+        _ensure_column(conn, "groups", "target_title", "TEXT")
         _ensure_column(conn, "group_channels", "display_title", "TEXT")
 
 
@@ -215,6 +217,7 @@ def _row_to_group(row: sqlite3.Row, channels: list[str]) -> Group:
         max_messages_per_channel=row["max_messages_per_channel"],
         max_age_days=row["max_age_days"],
         min_message_length=row["min_message_length"],
+        target_title=row["target_title"],
     )
 
 
@@ -282,9 +285,10 @@ def groups_upsert(
             """
             INSERT INTO groups(name, cron, interval_hours, interval_anchor,
                                interests, instructions, bot_name, target,
+                               target_title,
                                max_messages_per_channel, max_age_days,
                                min_message_length)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(name) DO UPDATE SET
                 cron = excluded.cron,
                 interval_hours = excluded.interval_hours,
@@ -293,6 +297,7 @@ def groups_upsert(
                 instructions = excluded.instructions,
                 bot_name = excluded.bot_name,
                 target = excluded.target,
+                target_title = excluded.target_title,
                 max_messages_per_channel = excluded.max_messages_per_channel,
                 max_age_days = excluded.max_age_days,
                 min_message_length = excluded.min_message_length,
@@ -301,6 +306,7 @@ def groups_upsert(
             (
                 group.name, group.cron, group.interval_hours, group.interval_anchor,
                 group.interests, group.instructions, group.bot, group.target,
+                group.target_title,
                 group.max_messages_per_channel, group.max_age_days, group.min_message_length,
             ),
         )

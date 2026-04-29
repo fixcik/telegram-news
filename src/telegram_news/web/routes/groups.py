@@ -114,6 +114,7 @@ def _build_group_from_form(
         max_messages_per_channel=max_msgs_v,
         max_age_days=max_age_v,
         min_message_length=min_len_v,
+        target_title=target_title.strip() or None,
     )
     return group, channel_originals, channel_titles, None
 
@@ -132,7 +133,6 @@ def _annotate_group_for_form(db_path, group: Group | None) -> Group | None:
             "original": r["channel"],
         })
     group.resolved_channels = resolved
-    group.target_title = group.target  # title not yet cached for target
     return group
 
 

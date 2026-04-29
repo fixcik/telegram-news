@@ -41,6 +41,7 @@ def _row_data(cfg, scheduler_ctl, g):
         "channels": channels,
         "bot": g.bot,
         "target": g.target,
+        "target_label": g.target_title or g.target,
         "last_digest_at": _format_last_digest(
             last_digest_at(cfg.storage.db_path, g.name), cfg.schedule.timezone,
         ),
