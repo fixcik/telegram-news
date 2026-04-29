@@ -91,5 +91,32 @@ The CLI `auth` command exists as a fallback (uses `client.start()` which prompts
 - **Single-process assumption**: don't run `serve` and `run-once` simultaneously — Telethon's session file is SQLite and two clients on the same session race.
 - **UI has no auth of its own.** It is meant to be reached over `127.0.0.1` only. Exposing publicly without a reverse-proxy/basic-auth in front is unsafe.
 - **No CSRF protection.** Same reason — single-user localhost.
-- **System prompt enforces plain text output** (`•` bullets, inline URLs). Don't change `summarize.SYSTEM_PROMPT` to markdown/HTML without also changing `delivery.send_to_channel` to set `parse_mode` and escape — Telegram's MarkdownV2 has aggressive escaping rules that break otherwise.
+- **System prompt outputs Telegram HTML** (limited tags: `<b>`, `<i>`, `<u>`, `<s>`, `<a href="…">`, `<code>`, `<blockquote>`). `delivery.send_to_channel` posts with `parse_mode="HTML"` (verify in `delivery.py`). Don't switch to MarkdownV2 without escaping every special char per Telegram's rules.
 - **cSpell warnings on Russian content** (interests/instructions, brand names like `deepseek`, `durov`) are noise — ignore.
+
+## Channel/peer storage
+
+- A row in `group_channels.channel` holds **one of**:
+  - canonical `-100…` numeric peer-id as a string (channels and supergroups, post-migration via the new chat picker),
+  - `-<chat_id>` string (small legacy `Chat`),
+  - or legacy `@username` (from before the picker; still works through `client.get_entity`).
+- `tg._resolve_entity` decides which form a value is by inspecting its first character + magnitude.
+- New entries from the picker always store the canonical numeric form plus a cached `display_title`.
+- Cursor (`channel_state`) rename happens in the same transaction as `groups_upsert` when an edit replaces an old identifier with the canonical form, so a chat-rename does not re-fetch the world.
+
+## Group chats vs broadcast channels
+
+- `tg.fetch_new_messages` enables sender attribution for everything except broadcast channels (`entity.broadcast`).
+- Skips: `msg.action` (system events) and short messages (`< min_length`) without URLs.
+- Replies are kept and prefixed with `↳` so the LLM knows.
+
+## Per-group overrides
+
+`groups` table has nullable columns `max_messages_per_channel`, `max_age_days`, `min_message_length`. NULL → use `cfg.fetcher.*` (or 20 for `min_message_length`). Editable in the form's "Лимиты" fieldset.
+
+## Chat picker / dialog cache
+
+- `dialog_cache.DialogCache` is a singleton on `app.state`, populated via `iter_dialogs(limit=None)` after authorisation (lifespan + post-web-auth).
+- Manual refresh: 🔄 button on the picker → `POST /api/dialogs/refresh`.
+- The picker (`_chat_picker.html`) is reused for both group source-list (multi) and target field (single).
+- Pasted links go through `resolve.parse_link` → `resolve.resolve(client, …)` → chip HTML.
