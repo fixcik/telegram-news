@@ -44,6 +44,10 @@
             <button class="btn-mini secondary"
                     hx-post="/groups/{{ r.name }}/run-now"
                     hx-swap="none">▶ Run</button>
+            <button class="btn-mini secondary outline"
+                    hx-post="/groups/{{ r.name }}/reset-cursors"
+                    hx-confirm="Сбросить курсоры группы {{ r.name }}? Следующий запуск возьмёт max_age_days свежих сообщений с нуля."
+                    hx-swap="none">⟳ Reset</button>
             <a href="/groups/{{ r.name }}/edit" role="button" class="btn-mini secondary outline">Edit</a>
             <button class="btn-mini contrast outline"
                     hx-post="/groups/{{ r.name }}/delete"

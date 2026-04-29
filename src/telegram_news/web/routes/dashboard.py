@@ -9,7 +9,13 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from ...db import channels_with_titles, groups_get, groups_list, last_digest_at
+from ...db import (
+    channels_with_titles,
+    groups_get,
+    groups_list,
+    last_digest_at,
+    reset_cursors,
+)
 from ...runner import run_group
 from ...scheduler_ctl import describe_schedule
 from ..htmx import htmx_response, is_htmx
@@ -92,6 +98,31 @@ async def run_now(name: str, request: Request):
         return htmx_response(toast=f"▶ {name}: запуск в очереди")
     return RedirectResponse(
         f"/?flash={quote(f'Запуск группы {name} поставлен в очередь')}",
+        status_code=303,
+    )
+
+
+@router.post("/groups/{name}/reset-cursors")
+async def reset_group_cursors(name: str, request: Request):
+    cfg = request.app.state.cfg
+
+    group = groups_get(cfg.storage.db_path, name)
+    if not group:
+        if is_htmx(request):
+            return htmx_response(
+                status_code=404, toast=f"Группа {name} не найдена", toast_type="error",
+            )
+        return RedirectResponse(
+            f"/?error={quote(f'Группа {name} не найдена')}", status_code=303,
+        )
+
+    deleted = reset_cursors(cfg.storage.db_path, name)
+    log.info("Cursors reset for group=%s rows=%d", name, deleted)
+
+    if is_htmx(request):
+        return htmx_response(toast=f"⟳ {name}: сброшено курсоров — {deleted}")
+    return RedirectResponse(
+        f"/?flash={quote(f'Курсоры группы {name} сброшены ({deleted})')}",
         status_code=303,
     )
 

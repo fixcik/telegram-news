@@ -115,6 +115,19 @@ def get_last_message_id(db_path: str | Path, group_name: str, channel: str) -> i
         return row["last_message_id"] if row else 0
 
 
+def reset_cursors(db_path: str | Path, group_name: str) -> int:
+    """Delete all per-channel cursors for a group. Returns rows deleted.
+
+    After this, the next run treats every channel as 'never fetched' and
+    pulls up to max_messages_per_channel / max_age_days fresh messages.
+    """
+    with connect(db_path) as conn:
+        cur = conn.execute(
+            "DELETE FROM channel_state WHERE group_name = ?", (group_name,)
+        )
+        return cur.rowcount
+
+
 def set_last_message_id(
     db_path: str | Path, group_name: str, channel: str, message_id: int
 ) -> None:
