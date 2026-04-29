@@ -206,6 +206,198 @@
     @keyframes toast-out {
       to { transform: translateX(40px); opacity: 0; }
     }
+
+    /* Chat picker — used in group form for source list (multi) and target (single) */
+    .chat-picker {
+      border: 1px solid var(--pico-muted-border-color);
+      border-radius: var(--pico-border-radius);
+      padding: 0.55rem 0.7rem 0.65rem;
+      background: var(--pico-card-background-color);
+      margin-top: 0.25rem;
+    }
+
+    /* Selected chips area — hidden when empty so it doesn't reserve space */
+    .chat-picker .chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      margin-bottom: 0.55rem;
+    }
+    .chat-picker .chip-list:empty { display: none; }
+
+    .chat-picker .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: var(--pico-secondary-background);
+      color: var(--pico-color);
+      padding: 0.18rem 0.4rem 0.18rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      line-height: 1.2;
+      border: 1px solid var(--pico-muted-border-color);
+    }
+    .chat-picker .chip-icon { opacity: 0.9; }
+    .chat-picker .chip-title { font-weight: 500; }
+    .chat-picker .chip-username {
+      color: var(--pico-muted-color);
+      font-family: var(--pico-font-family-monospace);
+      font-size: 0.78rem;
+    }
+    .chat-picker .chip > button {
+      all: unset;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.05rem;
+      height: 1.05rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      color: var(--pico-muted-color);
+      transition: background 120ms ease, color 120ms ease;
+    }
+    .chat-picker .chip > button:hover {
+      background: var(--pico-del-color, #cc6666);
+      color: #fff;
+    }
+    .chat-picker .chip > button:focus-visible {
+      outline: 2px solid var(--pico-primary);
+      outline-offset: 1px;
+    }
+
+    /* Tabs row */
+    .chat-picker .picker-tabs {
+      display: flex;
+      align-items: center;
+      gap: 0.1rem;
+      border-bottom: 1px solid var(--pico-muted-border-color);
+      margin: 0 -0.7rem 0.55rem;
+      padding: 0 0.55rem;
+    }
+    .chat-picker .picker-tab {
+      all: unset;
+      cursor: pointer;
+      padding: 0.4rem 0.65rem;
+      font-size: 0.85rem;
+      color: var(--pico-muted-color);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 120ms ease, border-color 120ms ease;
+    }
+    .chat-picker .picker-tab:hover { color: var(--pico-color); }
+    .chat-picker .picker-tab.active {
+      color: var(--pico-primary);
+      border-bottom-color: var(--pico-primary);
+      font-weight: 500;
+    }
+    .chat-picker .picker-tab:focus-visible {
+      outline: 2px solid var(--pico-primary);
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+    .chat-picker .picker-refresh {
+      all: unset;
+      cursor: pointer;
+      margin-left: auto;
+      padding: 0.25rem 0.45rem;
+      font-size: 0.95rem;
+      border-radius: var(--pico-border-radius);
+      color: var(--pico-muted-color);
+      transition: background 120ms ease, color 120ms ease;
+    }
+    .chat-picker .picker-refresh:hover {
+      background: var(--pico-secondary-background);
+      color: var(--pico-color);
+    }
+
+    /* Pane visibility */
+    .chat-picker .picker-pane.hidden { display: none; }
+    .chat-picker .picker-pane[data-pane="link"] {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      align-items: stretch;
+    }
+    .chat-picker .picker-pane[data-pane="link"].hidden { display: none; }
+
+    /* Inputs inside picker — tighter and aligned */
+    .chat-picker .picker-search,
+    .chat-picker .picker-link-input {
+      width: 100%;
+      margin-bottom: 0;
+      font-size: 0.88rem;
+      --pico-form-element-spacing-vertical: 0.45rem;
+      --pico-form-element-spacing-horizontal: 0.7rem;
+    }
+    .chat-picker .picker-link-input { flex: 1; min-width: 14rem; }
+
+    /* Results panel — bordered card with scroll, hidden when no content */
+    .chat-picker .picker-results {
+      max-height: 280px;
+      overflow-y: auto;
+      margin-top: 0.45rem;
+      border: 1px solid var(--pico-muted-border-color);
+      border-radius: var(--pico-border-radius);
+      padding: 0.25rem;
+      background: var(--pico-background-color);
+    }
+    .chat-picker .picker-results:empty {
+      display: none;
+    }
+
+    .chat-picker .picker-result {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.55rem;
+      border-radius: 0.3rem;
+      cursor: pointer;
+      font-size: 0.88rem;
+      transition: background 100ms ease;
+    }
+    .chat-picker .picker-result:hover,
+    .chat-picker .picker-result:focus-visible {
+      background: var(--pico-secondary-background);
+      outline: none;
+    }
+    .chat-picker .picker-result-icon { opacity: 0.85; flex-shrink: 0; }
+    .chat-picker .picker-result-title {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .chat-picker .picker-result small {
+      color: var(--pico-muted-color);
+      font-family: var(--pico-font-family-monospace);
+      font-size: 0.78rem;
+      flex-shrink: 0;
+    }
+
+    /* Empty / not-found placeholder inside results */
+    .chat-picker .picker-empty {
+      padding: 0.55rem 0.6rem;
+      color: var(--pico-muted-color);
+      font-size: 0.85rem;
+      font-style: italic;
+    }
+
+    /* Link tab "Add" button — compact */
+    .chat-picker .picker-link-add {
+      --pico-form-element-spacing-vertical: 0.45rem;
+      --pico-form-element-spacing-horizontal: 0.9rem;
+      font-size: 0.85rem;
+      margin: 0;
+      flex-shrink: 0;
+    }
+    .chat-picker .picker-link-error {
+      flex-basis: 100%;
+    }
+    .chat-picker .picker-link-error small.error {
+      color: var(--pico-del-color, #cc6666);
+      font-size: 0.82rem;
+    }
   </style>
 </head>
 <body>
