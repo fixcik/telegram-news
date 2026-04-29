@@ -34,7 +34,7 @@
         <td><strong>{{ r.name }}</strong></td>
         {% with group=r.group, description=r.schedule %}{% include "_schedule_cell.html" %}{% endwith %}
         <td>
-          {% for ch in r.channels %}<span class="channel-badge">{{ ch }}</span>{% endfor %}
+          {% for ch in r.channels %}<span class="channel-badge" title="{{ ch.channel }}">{{ ch.label }}</span>{% endfor %}
         </td>
         <td class="target-mono">{{ r.bot }} → {{ r.target }}</td>
         {% with name=r.name, text=r.last_digest_at %}{% include "_last_digest_cell.html" %}{% endwith %}

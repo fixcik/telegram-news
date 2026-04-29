@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from ...db import groups_get, groups_list, last_digest_at
+from ...db import channels_with_titles, groups_get, groups_list, last_digest_at
 from ...runner import run_group
 from ...scheduler_ctl import describe_schedule
 from ..htmx import htmx_response, is_htmx
@@ -30,10 +30,15 @@ def _format_last_digest(raw: str | None, tz_name: str) -> str:
 
 def _row_data(cfg, scheduler_ctl, g):
     next_run = scheduler_ctl.next_run_time(g.name)
+    rows = channels_with_titles(cfg.storage.db_path, g.name)
+    channels = [
+        {"channel": r["channel"], "label": r["display_title"] or r["channel"]}
+        for r in rows
+    ]
     return {
         "name": g.name,
         "schedule": describe_schedule(g),
-        "channels": g.channels,
+        "channels": channels,
         "bot": g.bot,
         "target": g.target,
         "last_digest_at": _format_last_digest(
