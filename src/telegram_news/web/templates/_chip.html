@@ -1,0 +1,11 @@
+{# Variables: peer (ResolvedPeer or CachedDialog), name (form field), original (string) #}
+{% set icon = '📢' if peer.kind == 'channel' else '👥' %}
+<span class="chip" data-peer-id="{{ peer.peer_id }}">
+  <span class="chip-icon">{{ icon }}</span>
+  <span class="chip-title">{{ peer.title }}</span>
+  {% if peer.username %}<small class="chip-username">@{{ peer.username }}</small>{% endif %}
+  <button type="button" onclick="removeChip(this)" aria-label="Удалить">✕</button>
+  <input type="hidden" name="{{ name }}" value="{{ peer.peer_id }}">
+  <input type="hidden" name="{{ name }}__original" value="{{ original }}">
+  <input type="hidden" name="{{ name }}__title" value="{{ peer.title }}">
+</span>
