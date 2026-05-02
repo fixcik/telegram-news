@@ -72,6 +72,7 @@ def create_app(cfg: Config) -> FastAPI:
             log.warning("User not authorized; scheduler will populate after /auth")
 
         scheduler.start()
+        scheduler_ctl.start_health_check()
 
         log_bus = LogBus(capacity=400)
         log_handler = _attach_log_bus(log_bus)

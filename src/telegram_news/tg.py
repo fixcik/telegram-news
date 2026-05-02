@@ -36,6 +36,16 @@ def make_client(cfg: Config) -> TelegramClient:
     )
 
 
+async def ensure_connected(client: TelegramClient) -> None:
+    # Telethon's auto_reconnect can permanently give up (e.g. after a VPN flap
+    # exhausts its retry budget), leaving _user_connected=False forever. Every
+    # subsequent request then raises ConnectionError. Re-arm the sender.
+    if not client.is_connected():
+        log.warning("Telethon disconnected; reconnecting")
+        await client.connect()
+        log.info("Telethon reconnected")
+
+
 async def _resolve_entity(client: TelegramClient, channel: str):
     """Inverse of resolve.parse_link: take stored DB value -> Telethon entity."""
     s = channel.strip()

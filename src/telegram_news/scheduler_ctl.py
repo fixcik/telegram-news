@@ -12,6 +12,7 @@ from telethon import TelegramClient
 
 from .config import Config, Group
 from .runner import run_group
+from .tg import ensure_connected
 
 log = logging.getLogger(__name__)
 
@@ -103,3 +104,23 @@ class SchedulerCtl:
     def next_run_time(self, group_name: str):
         job = self.scheduler.get_job(self._job_id(group_name))
         return job.next_run_time if job else None
+
+    def start_health_check(self, interval_seconds: int = 60) -> None:
+        # Closes the gap between scheduled ticks: if Telethon drops, this
+        # reconnects within ~interval_seconds instead of waiting for the next
+        # group tick (which could be hours away).
+        async def _tick() -> None:
+            try:
+                await ensure_connected(self.client)
+            except Exception:
+                log.exception("Periodic reconnect failed")
+
+        self.scheduler.add_job(
+            _tick,
+            IntervalTrigger(seconds=interval_seconds),
+            id="telethon-health-check",
+            max_instances=1,
+            coalesce=True,
+            replace_existing=True,
+        )
+        log.info("Telethon health check scheduled every %ds", interval_seconds)

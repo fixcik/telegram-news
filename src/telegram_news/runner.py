@@ -15,7 +15,7 @@ from .db import (
 )
 from .delivery import send_to_channel
 from .summarize import summarize_group
-from .tg import Message, fetch_new_messages
+from .tg import Message, ensure_connected, fetch_new_messages
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +27,8 @@ async def run_group(cfg: Config, client: TelegramClient, group: Group) -> None:
     schedules without cursor interference.
     """
     log.info("Running group=%s channels=%d", group.name, len(group.channels))
+
+    await ensure_connected(client)
 
     all_messages: list[Message] = []
     max_id_by_channel: dict[str, int] = {}
