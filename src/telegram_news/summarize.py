@@ -31,6 +31,10 @@ SYSTEM_PROMPT = """\
 - Темы вне фокуса — короткая строка без раскрытия или пропускай.
 - Темы из "Не интересно" — пропускай молча.
 - Не выдумывай факты. Если в исходниках мало деталей — пиши короче.
+- Если в сообщениях есть проверяемые утверждения, цифры или имена, которые \
+важны для буллета и могут быть устаревшими/неточными — сверься через web search \
+и при необходимости поправь формулировку или добавь свежую ссылку. Web search \
+используй точечно, не на каждый буллет.
 - Если ни одно сообщение не подходит — выведи ровно одну строку: <i>Ничего по интересам за период.</i>
 
 Аккуратно с HTML:
@@ -85,13 +89,17 @@ async def summarize_group(
     parts.append("Сделай дайджест по правилам.")
     user_prompt = "\n".join(parts)
 
+    model = cfg.openrouter.model
+    if not model.endswith(":online"):
+        model = f"{model}:online"
+
     log.info(
         "Summarizing group=%s messages=%d via model=%s",
-        group.name, len(messages), cfg.openrouter.model,
+        group.name, len(messages), model,
     )
 
     resp = await client.chat.completions.create(
-        model=cfg.openrouter.model,
+        model=model,
         temperature=cfg.openrouter.temperature,
         max_tokens=cfg.openrouter.max_tokens,
         messages=[
